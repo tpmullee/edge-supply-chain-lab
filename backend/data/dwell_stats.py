@@ -1,0 +1,9 @@
+lane,avg_dwell_hours,p50_dwell_hours,p90_dwell_hours
+SEA_LAX,18,12,30
+SEA_ORD,10,8,18
+LAX_DFW,14,10,26
+ATL_EWR,6,5,12
+ORD_DEN,9,7,16
+DFW_MIA,20,15,34
+SFO_JFK,22,16,38
+LAX_CHI,11,9,20

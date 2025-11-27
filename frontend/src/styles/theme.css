@@ -1,0 +1,14 @@
+/* Shared theme variables */
+
+:root {
+  --edge-bg-1: #05070b;
+  --edge-bg-2: #1a1f2a;
+  --edge-bg-3: #181e2b;
+  --edge-border: rgba(255, 255, 255, 0.06);
+  --edge-text-1: #f5f7ff;
+  --edge-text-2: #d6dae8;
+  --edge-text-3: #9aa1b6;
+  --edge-accent-1: #f5b66a;
+  --edge-accent-2: #f48f4d;
+  --edge-shadow: rgba(0, 0, 0, 0.7);
+}
