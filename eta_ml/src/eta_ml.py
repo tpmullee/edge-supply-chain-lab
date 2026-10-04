@@ -371,7 +371,7 @@ def export_runtime_artifact(bundle: dict[str, Any], path: str | Path) -> dict[st
     init = float(np.asarray(model.init_.constant_).reshape(-1)[0])
     u = bundle["uncertainty"]
     artifact = {
-        "model_version": "eta-gbr-2026-10-04-v1",
+        "model_version": bundle["model_version"],
         "synthetic_data": True,
         "features": bundle["features"],
         "facility_profiles": bundle["facility_profiles"],
