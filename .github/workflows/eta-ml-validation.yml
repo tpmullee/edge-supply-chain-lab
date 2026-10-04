@@ -54,6 +54,7 @@ jobs:
           naive = evaluation["baseline"]
           lane = evaluation["lane_average_baseline"]
           uncertainty = evaluation["uncertainty"]
+          lane_diag = evaluation["unseen_lane_diagnostic"]
 
           assert evaluation["synthetic_data"] is True
           assert evaluation["split"]["test_rows"] == 4500
@@ -61,12 +62,14 @@ jobs:
           assert ml["mae_min"] < lane["mae_min"]
           assert ml["within_60_min_pct"] > lane["within_60_min_pct"]
           assert 85 <= uncertainty["test_coverage_pct"] <= 95
+          assert lane_diag["ml"]["mae_min"] < lane_diag["baseline"]["mae_min"]
 
           print(json.dumps({
               "ml_mae_min": round(ml["mae_min"], 2),
               "lane_average_mae_min": round(lane["mae_min"], 2),
               "naive_mae_min": round(naive["mae_min"], 2),
               "within_60_pct": round(ml["within_60_min_pct"], 1),
-              "interval_coverage_pct": round(uncertainty["test_coverage_pct"], 1)
+              "interval_coverage_pct": round(uncertainty["test_coverage_pct"], 1),
+              "unseen_lane_mae_min": round(lane_diag["ml"]["mae_min"], 2)
           }, indent=2))
           PY
