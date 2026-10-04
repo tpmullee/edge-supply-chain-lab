@@ -1,0 +1,47 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: Isolated staging API for ETA ML v1. Does not modify the existing SCV production endpoint.
+
+Parameters:
+  AllowedOrigin:
+    Type: String
+    Default: https://staging.patmullee.com
+
+Resources:
+  EtaV1StagingApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      StageName: staging
+      CorsConfiguration:
+        AllowOrigins:
+          - !Ref AllowedOrigin
+        AllowMethods:
+          - POST
+          - OPTIONS
+        AllowHeaders:
+          - Content-Type
+          - x-api-key
+        MaxAge: 300
+
+  EtaV1Function:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: autogen-scv-eta-api-v1-staging
+      Runtime: python3.11
+      Handler: lambda_handler.handler
+      CodeUri: build/lambda/
+      MemorySize: 128
+      Timeout: 5
+      ReservedConcurrentExecutions: 5
+      Events:
+        Eta:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref EtaV1StagingApi
+            Path: /eta
+            Method: POST
+
+Outputs:
+  EtaV1StagingBaseUrl:
+    Description: Set this as REACT_APP_SCV_API_BASE for the portfolio staging build.
+    Value: !Sub "https://${EtaV1StagingApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/staging"
