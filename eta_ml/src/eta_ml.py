@@ -487,14 +487,8 @@ def predict(
     return result
 
 
-def explain_with_shap(
-    bundle: dict[str, Any],
-    *,
-    origin: str,
-    destination: str,
-    depart_time: str,
-    top_n: int = 6,
-) -> dict[str, Any]:
+def explain_with_shap(bundle: dict[str, Any], *, origin: str, destination: str, depart_time: str, top_n: int = 6) -> dict[str, Any]:
+    """Return real tree-SHAP values plus operator-friendly grouped contributions."""
     import shap
 
     depart = pd.Timestamp(depart_time)
@@ -505,23 +499,70 @@ def explain_with_shap(
     feat = _feature_row(origin, destination, depart, bundle["lane_profiles"])
     x = pd.DataFrame([{k: feat[k] for k in bundle["features"]}])
     explainer = shap.TreeExplainer(bundle["model"])
-    values = np.asarray(explainer.shap_values(x)).reshape(-1)
-    pairs = sorted(
-        zip(bundle["features"], values),
-        key=lambda kv: abs(kv[1]),
-        reverse=True,
-    )[:top_n]
+    vals = np.asarray(explainer.shap_values(x)).reshape(-1)
+    all_pairs = list(zip(bundle["features"], vals))
+    pairs = sorted(all_pairs, key=lambda kv: abs(kv[1]), reverse=True)[:top_n]
+
+    groups = {
+        "Lane historical performance": {
+            "lane_delay_mean_min", "lane_delay_std_min", "lane_reliability"
+        },
+        "Destination dwell & congestion": {
+            "destination_dwell_mean_min", "destination_dwell_p90_min",
+            "destination_congestion_index"
+        },
+        "Origin dwell & congestion": {
+            "origin_dwell_mean_min", "origin_congestion_index"
+        },
+        "Departure timing": {
+            "departure_hour_sin", "departure_hour_cos", "departure_dow_sin",
+            "departure_dow_cos", "is_weekend", "is_peak_window", "is_friday",
+            "is_monday"
+        },
+        "Seasonal corridor exposure": {"is_winter", "route_winter_exposure"},
+        "Distance & service plan": {"distance_miles", "planned_transit_min"},
+    }
+    grouped = []
+    used = set()
+    by_feature = dict(all_pairs)
+    for label, feature_names in groups.items():
+        present = [name for name in feature_names if name in by_feature]
+        if not present:
+            continue
+        used.update(present)
+        minutes = float(sum(by_feature[name] for name in present))
+        grouped.append({
+            "factor": label,
+            "minutes": round(minutes, 3),
+            "features": present,
+        })
+    ungrouped = [name for name in bundle["features"] if name not in used]
+    if ungrouped:
+        grouped.append({
+            "factor": "Other model features",
+            "minutes": round(float(sum(by_feature[name] for name in ungrouped)), 3),
+            "features": ungrouped,
+        })
+    grouped.sort(key=lambda item: abs(item["minutes"]), reverse=True)
+
+    expected = float(np.asarray(explainer.expected_value).reshape(-1)[0])
+    model_correction = float(bundle["model"].predict(x)[0])
+    grouped_total = float(sum(item["minutes"] for item in grouped))
     return {
         "method": "SHAP TreeExplainer",
-        "base_residual_min": round(
-            float(np.asarray(explainer.expected_value).reshape(-1)[0]), 3
-        ),
-        "contributions": [
+        "base_residual_min": round(expected, 3),
+        "model_correction_min": round(model_correction, 3),
+        "grouped_contributions": grouped,
+        "top_raw_contributions": [
             {
-                "feature": name,
-                "minutes": round(float(value), 3),
-                "value": round(float(feat[name]), 5),
+                "feature": k,
+                "minutes": round(float(v), 3),
+                "value": round(float(feat[k]), 5),
             }
-            for name, value in pairs
+            for k, v in pairs
         ],
+        "reconciliation": {
+            "base_plus_grouped_min": round(expected + grouped_total, 3),
+            "difference_vs_model_min": round(expected + grouped_total - model_correction, 6),
+        },
     }
