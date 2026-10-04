@@ -256,6 +256,39 @@ def chronological_split(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, p
     return df.iloc[:train_end].copy(), df.iloc[train_end:calib_end].copy(), df.iloc[calib_end:].copy()
 
 
+def unseen_lane_diagnostic(df: pd.DataFrame) -> dict[str, Any]:
+    """Secondary stress test: predict shipments from lanes never seen as training rows."""
+    held_out_lanes = {
+        "ORD|LAX", "LAX|ORD", "DFW|ATL", "EWR|CLT", "HOU|DFW", "SEA|ORD"
+    }
+    train = df[~df["lane"].isin(held_out_lanes)].copy()
+    test = df[df["lane"].isin(held_out_lanes)].copy()
+    model = GradientBoostingRegressor(
+        loss="huber",
+        n_estimators=260,
+        learning_rate=0.045,
+        max_depth=3,
+        min_samples_leaf=24,
+        subsample=0.86,
+        random_state=SEED,
+    )
+    model.fit(train[FEATURES], train["target_residual_min"])
+    ml_pred = test["baseline_transit_min"].to_numpy() + model.predict(test[FEATURES])
+    baseline_pred = test["baseline_transit_min"].to_numpy()
+    y = test["actual_transit_min"].to_numpy()
+    return {
+        "purpose": (
+            "Secondary transfer diagnostic for lanes with no training shipment rows. "
+            "Historical lane/facility profile features are still available, so this is not a zero-history cold start."
+        ),
+        "held_out_lanes": sorted(held_out_lanes),
+        "train_rows": len(train),
+        "test_rows": len(test),
+        "ml": asdict(regression_metrics(y, ml_pred)),
+        "baseline": asdict(regression_metrics(y, baseline_pred)),
+    }
+
+
 def train_bundle(df: pd.DataFrame) -> tuple[dict[str, Any], dict[str, Any]]:
     train, calib, test = chronological_split(df)
     model = GradientBoostingRegressor(
@@ -408,6 +441,7 @@ def save_training_outputs(root: Path, n: int = 30000) -> dict[str, Any]:
     df = generate_synthetic_shipments(n=n)
     df.to_csv(data_dir / "synthetic_shipments.csv", index=False)
     bundle, report = train_bundle(df)
+    report["unseen_lane_diagnostic"] = unseen_lane_diagnostic(df)
     joblib.dump(bundle, artifacts / "eta_model_bundle.joblib", compress=3)
     export_runtime_artifact(bundle, artifacts / "eta_model.json")
     (artifacts / "evaluation.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
@@ -423,6 +457,7 @@ def save_training_outputs(root: Path, n: int = 30000) -> dict[str, Any]:
             "improvement": report["improvement"],
         },
         "uncertainty": report["uncertainty"],
+        "diagnostics": {"unseen_lane": report["unseen_lane_diagnostic"]},
     }
     (artifacts / "model_card.json").write_text(
         json.dumps(public_meta, indent=2), encoding="utf-8"
