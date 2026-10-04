@@ -54,5 +54,36 @@
     "q05_error_min": -91.38587073849311,
     "q95_error_min": 99.94640900207182
   },
-  "model_version": "eta-gbr-2026-10-04-v1"
+  "model_version": "eta-gbr-2026-10-04-v1",
+  "unseen_lane_diagnostic": {
+    "purpose": "Secondary transfer diagnostic for lanes with no training shipment rows. Historical lane/facility profile features are still available, so this is not a zero-history cold start.",
+    "held_out_lanes": [
+      "DFW|ATL",
+      "EWR|CLT",
+      "HOU|DFW",
+      "LAX|ORD",
+      "ORD|LAX",
+      "SEA|ORD"
+    ],
+    "train_rows": 23294,
+    "test_rows": 6706,
+    "ml": {
+      "mae_min": 48.322659052574956,
+      "median_ae_min": 39.34201840082801,
+      "rmse_min": 63.21050818296594,
+      "within_30_min_pct": 39.859827020578585,
+      "within_60_min_pct": 69.31106471816284,
+      "within_120_min_pct": 94.6316731285416,
+      "bias_min": -2.8508442070600553
+    },
+    "baseline": {
+      "mae_min": 65.16072720946421,
+      "median_ae_min": 51.54800000000006,
+      "rmse_min": 85.2766316486409,
+      "within_30_min_pct": 30.002982403817473,
+      "within_60_min_pct": 57.12794512376976,
+      "within_120_min_pct": 85.68446167611094,
+      "bias_min": -41.188652152301515
+    }
+  }
 }
