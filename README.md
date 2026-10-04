@@ -1,5 +1,10 @@
 # EDGE Supply Chain Lab
 
+> **ETA v1 rebuild in progress on this branch:** a supervised Gradient Boosting model trained on 30,000 disclosed synthetic FTL shipments, evaluated on a chronological future holdout, compared with both a naive operating heuristic and a training-only lane-average baseline, with real SHAP explanations and held-out residual prediction ranges. See `eta_ml/` for the reproducible model package and measured artifacts.
+>
+> The older FastAPI `/eta/train` RandomForest flow remains in the repo as the original toy prototype; it is not the model used for the new v1 evaluation claims.
+
+
 A unified portfolio application showcasing real supply chain analytics capabilities built by **Pat Mullee**.
 
 This application is designed to demonstrate practical, executive-level supply chain insights that a COO, VP Supply Chain, or Senior Analytics Leader would expect — presented in a clean, modern interface matching the brand of Pat’s portfolio.
