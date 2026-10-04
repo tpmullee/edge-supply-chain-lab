@@ -111,13 +111,12 @@ Resources:
         - arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiId}/authorizers/*
         - ApiId: !Ref EtaV1StagingApi
 
+
 Outputs:
 
   EtaV1StagingBaseUrl:
     Description: Staging-only ETA v1 API base URL.
-    Value: !Sub
-      - https://$\{ApiId\}.execute-api.$\{AWS::Region\}.$\{AWS::URLSuffix\}/staging
-      - ApiId: !Ref EtaV1StagingApi
+    Value: !Sub "https://${EtaV1StagingApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/staging"
 
   EtaV1FunctionArn:
     Description: ETA ML v1 staging Lambda ARN.
