@@ -1,0 +1,72 @@
+name: ETA ML v1 Validation
+
+on:
+  push:
+    branches:
+      - feat/eta-ml-v1
+    paths:
+      - "eta_ml/**"
+      - ".github/workflows/eta-ml-validation.yml"
+  pull_request:
+    paths:
+      - "eta_ml/**"
+      - "backend/routers/eta_model.py"
+      - ".github/workflows/eta-ml-validation.yml"
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: eta_ml
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: eta_ml/requirements.txt
+
+      - name: Install dependencies
+        run: python -m pip install -r requirements.txt
+
+      - name: Rebuild synthetic data and model artifacts
+        run: python train.py
+
+      - name: Run model and serving tests
+        run: python -m pytest -q
+
+      - name: Validate held-out performance
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          evaluation = json.loads(Path("artifacts/evaluation.json").read_text())
+          ml = evaluation["ml"]
+          naive = evaluation["baseline"]
+          lane = evaluation["lane_average_baseline"]
+          uncertainty = evaluation["uncertainty"]
+
+          assert evaluation["synthetic_data"] is True
+          assert evaluation["split"]["test_rows"] == 4500
+          assert ml["mae_min"] < naive["mae_min"]
+          assert ml["mae_min"] < lane["mae_min"]
+          assert ml["within_60_min_pct"] > lane["within_60_min_pct"]
+          assert 85 <= uncertainty["test_coverage_pct"] <= 95
+
+          print(json.dumps({
+              "ml_mae_min": round(ml["mae_min"], 2),
+              "lane_average_mae_min": round(lane["mae_min"], 2),
+              "naive_mae_min": round(naive["mae_min"], 2),
+              "within_60_pct": round(ml["within_60_min_pct"], 1),
+              "interval_coverage_pct": round(uncertainty["test_coverage_pct"], 1)
+          }, indent=2))
+          PY
