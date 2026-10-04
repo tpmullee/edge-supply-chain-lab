@@ -322,6 +322,7 @@ def train_bundle(df: pd.DataFrame) -> tuple[dict[str, Any], dict[str, Any]]:
     coverage90 = float(((y >= low90) & (y <= high90)).mean() * 100)
 
     bundle = {
+        "model_version": MODEL_VERSION,
         "model": model,
         "features": FEATURES,
         "facility_profiles": FACILITIES,
@@ -352,6 +353,7 @@ def train_bundle(df: pd.DataFrame) -> tuple[dict[str, Any], dict[str, Any]]:
     }
 
     report = {
+        "model_version": MODEL_VERSION,
         "synthetic_data": True,
         "split": bundle["training"],
         "model": "GradientBoostingRegressor trained on residual minutes above heuristic baseline",
