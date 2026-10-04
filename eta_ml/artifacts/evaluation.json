@@ -17,7 +17,7 @@
     "median_ae_min": 37.92219842003988,
     "rmse_min": 61.17701384108552,
     "within_30_min_pct": 39.51111111111111,
-    "within_60_min_pct": 71.0,
+    "within_60_min_pct": 71,
     "within_120_min_pct": 95.31111111111112,
     "bias_min": -1.3972497223997518
   },
@@ -53,5 +53,6 @@
     "test_coverage_pct": 89.35555555555555,
     "q05_error_min": -91.38587073849311,
     "q95_error_min": 99.94640900207182
-  }
+  },
+  "model_version": "eta-gbr-2026-10-04-v1"
 }
