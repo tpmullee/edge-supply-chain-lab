@@ -3,3 +3,4 @@ artifacts/eta_model_bundle.joblib
 artifacts/eta_model.json
 __pycache__/
 .pytest_cache/
+build/
