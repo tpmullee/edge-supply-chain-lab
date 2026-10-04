@@ -1,6 +1,11 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Transform: AWS::Serverless-2016-10-31
-Description: Isolated staging API for ETA ML v1. Does not modify the existing SCV production endpoint.
+
+Description: >
+  Isolated staging API for ETA ML v1.
+  Creates a new API and ETA Lambda only.
+  Does not modify the existing qh3awhwj5e SCV API,
+  production ETA Lambda, signup route, or dwell-risk route.
 
 Parameters:
   AllowedOrigin:
@@ -8,10 +13,15 @@ Parameters:
     Default: https://staging.patmullee.com
 
 Resources:
+
+  # ---------------------------------------------------------------------------
+  # New staging-only HTTP API
+  # ---------------------------------------------------------------------------
   EtaV1StagingApi:
     Type: AWS::Serverless::HttpApi
     Properties:
       StageName: staging
+
       CorsConfiguration:
         AllowOrigins:
           - !Ref AllowedOrigin
@@ -19,20 +29,43 @@ Resources:
           - POST
           - OPTIONS
         AllowHeaders:
-          - Content-Type
+          - content-type
           - x-api-key
-        MaxAge: 300
+        MaxAge: 600
 
+      # Reproduce the existing SCV request-authorizer contract.
+      # The authorizer Lambda itself already exists and continues
+      # validating API-key hashes in scv-keys-store.
+      Auth:
+        Authorizers:
+          ExistingScvKeyAuthorizer:
+            AuthorizerPayloadFormatVersion: "2.0"
+            EnableSimpleResponses: true
+            FunctionArn: arn:aws:lambda:us-east-1:066885643524:function:autogen-scv-auth
+            Identity:
+              Headers:
+                - x-api-key
+              ReauthorizeEvery: 0
+
+  # ---------------------------------------------------------------------------
+  # New ETA v1 inference Lambda
+  # ---------------------------------------------------------------------------
   EtaV1Function:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: autogen-scv-eta-api-v1-staging
-      Runtime: python3.11
+      Runtime: python3.14
       Handler: lambda_handler.handler
       CodeUri: build/lambda/
+      Architectures:
+        - x86_64
       MemorySize: 128
       Timeout: 5
-      ReservedConcurrentExecutions: 5
+
+      # Frozen model + calibration data are inside the deployment artifact.
+      # This function requires no S3/model-store access.
+      Role: !GetAtt EtaV1ExecutionRole.Arn
+
       Events:
         Eta:
           Type: HttpApi
@@ -40,8 +73,52 @@ Resources:
             ApiId: !Ref EtaV1StagingApi
             Path: /eta
             Method: POST
+            Auth:
+              Authorizer: ExistingScvKeyAuthorizer
+
+  # ---------------------------------------------------------------------------
+  # Logs-only execution role for ETA v1
+  # ---------------------------------------------------------------------------
+  EtaV1ExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Description: Logs-only execution role for isolated ETA ML v1 staging Lambda.
+
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+  # ---------------------------------------------------------------------------
+  # New staging API must be allowed to invoke the EXISTING key authorizer.
+  # This does not modify the existing qh3awhwj5e routes.
+  # ---------------------------------------------------------------------------
+  ExistingScvAuthorizerInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: arn:aws:lambda:us-east-1:066885643524:function:autogen-scv-auth
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub
+        - arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiId}/authorizers/*
+        - ApiId: !Ref EtaV1StagingApi
 
 Outputs:
+
   EtaV1StagingBaseUrl:
-    Description: Set this as REACT_APP_SCV_API_BASE for the portfolio staging build.
-    Value: !Sub "https://${EtaV1StagingApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/staging"
+    Description: Staging-only ETA v1 API base URL.
+    Value: !Sub
+      - https://$\{ApiId\}.execute-api.$\{AWS::Region\}.$\{AWS::URLSuffix\}/staging
+      - ApiId: !Ref EtaV1StagingApi
+
+  EtaV1FunctionArn:
+    Description: ETA ML v1 staging Lambda ARN.
+    Value: !GetAtt EtaV1Function.Arn
