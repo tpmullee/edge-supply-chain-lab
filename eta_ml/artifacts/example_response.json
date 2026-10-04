@@ -1,0 +1,17 @@
+{
+  "synthetic_data": true,
+  "lane": "ORD|LAX",
+  "model_version": "eta-gbr-2026-10-04-v1",
+  "predicted_transit_min": 2929.57,
+  "baseline_transit_min": 2872.8,
+  "ml_adjustment_min": 56.77,
+  "predicted_eta": "2026-10-11T13:49:34.124988Z",
+  "likely_range_90": {
+    "low": "2026-10-11T12:18:10.972744Z",
+    "high": "2026-10-11T15:29:30.909528Z"
+  },
+  "p90_eta": "2026-10-11T15:04:47.315987Z",
+  "uncertainty_method": "held-out signed residual quantiles",
+  "late_threshold": "2026-10-11T14:00:00Z",
+  "estimated_late_probability": 0.4196
+}
