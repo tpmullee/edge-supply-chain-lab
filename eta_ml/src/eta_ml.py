@@ -13,6 +13,7 @@ from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.metrics import mean_absolute_error, mean_squared_error, median_absolute_error
 
 SEED = 20261004
+MODEL_VERSION = "eta-gbr-2026-10-04-v1"
 ASSUMED_EFFECTIVE_SPEED_MPH = 45.0
 BASELINE_DWELL_MIN = 180.0
 FEATURES = [
