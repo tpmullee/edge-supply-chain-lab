@@ -449,6 +449,7 @@ def save_training_outputs(root: Path, n: int = 30000) -> dict[str, Any]:
     export_runtime_artifact(bundle, artifacts / "eta_model.json")
     (artifacts / "evaluation.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
     public_meta = {
+        "model_version": report["model_version"],
         "synthetic_data": True,
         "training_rows": report["split"]["rows"],
         "model": report["model"],
