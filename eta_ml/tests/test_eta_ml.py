@@ -45,3 +45,19 @@ def test_prediction_has_real_interval_and_probability():
     assert result["likely_range_90"]["low"] < result["likely_range_90"]["high"]
     assert 0 <= result["estimated_late_probability"] <= 1
     assert math.isfinite(result["ml_adjustment_min"])
+
+
+def test_grouped_shap_explanations_reconcile_to_model_correction():
+    from src.eta_ml import explain_with_shap
+
+    df = generate_synthetic_shipments(5000, seed=20261004)
+    bundle, _ = train_bundle(df)
+    explanation = explain_with_shap(
+        bundle,
+        origin="ORD",
+        destination="LAX",
+        depart_time="2026-10-09T13:00:00Z",
+    )
+    assert explanation["method"] == "SHAP TreeExplainer"
+    assert len(explanation["grouped_contributions"]) >= 5
+    assert abs(explanation["reconciliation"]["difference_vs_model_min"]) < 0.01
