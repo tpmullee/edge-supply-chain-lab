@@ -1,0 +1,76 @@
+{
+  "synthetic_data": true,
+  "model_version": "eta-gbr-2026-10-04-v1",
+  "request": {
+    "origin": "ORD",
+    "destination": "LAX",
+    "depart_time": "2026-10-09T13:00:00Z"
+  },
+  "explanation": {
+    "method": "SHAP TreeExplainer",
+    "base_residual_min": 46.061,
+    "model_correction_min": 56.769,
+    "grouped_contributions": [
+      {
+        "factor": "Destination dwell & congestion",
+        "minutes": 16.731,
+        "features": [
+          "destination_congestion_index",
+          "destination_dwell_p90_min",
+          "destination_dwell_mean_min"
+        ]
+      },
+      {
+        "factor": "Seasonal corridor exposure",
+        "minutes": -15.319,
+        "features": [
+          "is_winter",
+          "route_winter_exposure"
+        ]
+      },
+      {
+        "factor": "Departure timing",
+        "minutes": 13.185,
+        "features": [
+          "is_peak_window",
+          "departure_dow_sin",
+          "departure_dow_cos",
+          "is_friday",
+          "is_weekend",
+          "departure_hour_cos",
+          "is_monday",
+          "departure_hour_sin"
+        ]
+      },
+      {
+        "factor": "Lane historical performance",
+        "minutes": -11.541,
+        "features": [
+          "lane_delay_mean_min",
+          "lane_reliability",
+          "lane_delay_std_min"
+        ]
+      },
+      {
+        "factor": "Distance & service plan",
+        "minutes": 6.511,
+        "features": [
+          "distance_miles",
+          "planned_transit_min"
+        ]
+      },
+      {
+        "factor": "Origin dwell & congestion",
+        "minutes": 1.141,
+        "features": [
+          "origin_congestion_index",
+          "origin_dwell_mean_min"
+        ]
+      }
+    ],
+    "reconciliation": {
+      "base_plus_grouped_min": 56.769,
+      "difference_vs_model_min": -0.000137
+    }
+  }
+}
