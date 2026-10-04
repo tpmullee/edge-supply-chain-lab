@@ -43,6 +43,27 @@ jobs:
       - name: Run model and serving tests
         run: python -m pytest -q
 
+      - name: Package lean Lambda runtime
+        run: |
+          python package_lambda.py
+          python - <<'PY'
+          import zipfile
+          from pathlib import Path
+
+          path = Path("build/eta-ml-v1-lambda.zip")
+          assert path.exists()
+          assert path.stat().st_size < 1_000_000
+          with zipfile.ZipFile(path) as z:
+              names = set(z.namelist())
+          assert {
+              "lambda_handler.py",
+              "src/__init__.py",
+              "src/runtime.py",
+              "artifacts/eta_model.json",
+          }.issubset(names)
+          print(f"Lambda package: {path.stat().st_size:,} bytes")
+          PY
+
       - name: Validate held-out performance
         run: |
           python - <<'PY'
