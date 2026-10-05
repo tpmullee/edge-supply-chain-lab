@@ -1,0 +1,97 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+
+Description: >
+  Production API for ETA ML v1.
+  Isolated from the legacy SCV frontdoor and legacy ETA Lambda.
+
+Resources:
+
+  EtaV1ProductionApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      StageName: prod
+
+      CorsConfiguration:
+        AllowOrigins:
+          - https://patmullee.com
+          - https://www.patmullee.com
+        AllowMethods:
+          - POST
+          - OPTIONS
+        AllowHeaders:
+          - content-type
+          - x-api-key
+        MaxAge: 600
+
+      Auth:
+        Authorizers:
+          ExistingScvKeyAuthorizer:
+            AuthorizerPayloadFormatVersion: "2.0"
+            EnableSimpleResponses: true
+            FunctionArn: arn:aws:lambda:us-east-1:066885643524:function:autogen-scv-auth
+            Identity:
+              Headers:
+                - x-api-key
+              ReauthorizeEvery: 0
+
+  EtaV1Function:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: autogen-scv-eta-api-v1-prod
+      Runtime: python3.14
+      Handler: lambda_handler.handler
+      CodeUri: build/lambda/
+      Architectures:
+        - x86_64
+      MemorySize: 128
+      Timeout: 5
+      Role: !GetAtt EtaV1ExecutionRole.Arn
+
+      Events:
+        Eta:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref EtaV1ProductionApi
+            Path: /eta
+            Method: POST
+            Auth:
+              Authorizer: ExistingScvKeyAuthorizer
+
+  EtaV1ExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Description: Logs-only execution role for ETA ML v1 production Lambda.
+
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+  ExistingScvAuthorizerInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: arn:aws:lambda:us-east-1:066885643524:function:autogen-scv-auth
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub
+        - arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiId}/authorizers/*
+        - ApiId: !Ref EtaV1ProductionApi
+
+Outputs:
+
+  EtaV1ProductionBaseUrl:
+    Description: ETA ML v1 production API base URL.
+    Value: !Sub "https://${EtaV1ProductionApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/prod"
+
+  EtaV1FunctionArn:
+    Description: ETA ML v1 production Lambda ARN.
+    Value: !GetAtt EtaV1Function.Arn
